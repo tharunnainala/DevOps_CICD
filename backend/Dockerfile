@@ -1,27 +1,38 @@
-FROM public.ecr.aws/docker/library/python:3.10-alpine
+FROM python:3.10-slim
 
-ENV FLASK_RUN_HOST=0.0.0.0
-
+# Set working directory
 WORKDIR /app
 
-RUN adduser -u 1000 -D app
+# Create non-root user
+RUN useradd -u 1000 -m app
 
-RUN apk update && \
-    apk add --no-cache \
-    pcre \
-    pcre-dev \
-    build-base \
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y \
+    build-essential \
     gcc \
-    linux-headers \
-    openssl \
+    libpcre3 \
+    libpcre3-dev \
+    libssl-dev \
     libffi-dev && \
     python -m pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir pipenv
+    pip install --no-cache-dir pipenv && \
+    rm -rf /var/lib/apt/lists/*
 
+# Copy dependency files first
 COPY Pipfile Pipfile.lock ./
 
+# Install Python dependencies
 RUN pipenv install --system --deploy --ignore-pipfile
 
+# Copy application files
 COPY . .
 
-CMD uwsgi --http :5000 --master --enable-threads -s /var/www/app/app.sock --manage-script-name --mount /
+# Give ownership to app user
+RUN chown -R app:app /app
+
+# Switch to non-root user
+USER app
+
+# Run the application
+CMD ["uwsgi", "--ini", "uwsgi.ini"]
