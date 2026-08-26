@@ -24,6 +24,7 @@ RUN mkdir -p /var/www/app && mkdir /app
 COPY Pipfile* /app/
 
 RUN cd /app && pipenv install --system 
+RUN pip instakk --no-cache-dir uwsgi
 
 RUN pip install --no-cache-dir uwsgi
 
